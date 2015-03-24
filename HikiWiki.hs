@@ -6,6 +6,12 @@ import System.Exit
 import System.Directory
 import Data.Char(toUpper)
 import Data.Maybe (fromMaybe)
+import Data.List.Utils
+import Text.Regex.Posix
+import Control.Monad (forM)
+import System.Directory (doesDirectoryExist, getDirectoryContents)
+import System.FilePath ((</>))
+import System.FilePath.Posix
 
 getWikiName :: IO String
 getWikiName = do
@@ -17,34 +23,10 @@ getAdminUser = do
                putStrLn "What user will be admin?"
                getLine
 
-writeSetupFile :: String -> String -> IO ()
-writeSetupFile wikiName adminUser =
-        do putStrLn $ "Setting up " ++ wikiName ++ " ..."   
-           outh <- openFile (wikiName ++ ".setup") WriteMode
-           hPutStrLn outh "# HikiWiki::Setup::Yaml - YAML formatted setup file"
-           hPutStrLn outh "#"
-           hPutStrLn outh "# Setup file for HikiWiki."
-           hPutStrLn outh "#"
-           hPutStrLn outh "# Passing this to HikiWiki --setup will make HikiWiki generate"
-           hPutStrLn outh "# wrappers and build the wiki."
-           hPutStrLn outh "#"
-           hPutStrLn outh "# Remember to re-run HikiWiki --setup any time you edit this file."
-           hPutStrLn outh "#"
-           hPutStrLn outh "# name of the wiki"
-           hPutStrLn outh ("wikiname: " ++ wikiName)
-           hPutStrLn outh "# users who are wiki admins"
-           hPutStrLn outh "adminuser:"
-           hPutStrLn outh ("- " ++ adminUser)
-           hClose outh
-
-initBareRepo :: String -> IO ()
-initBareRepo wikiName =
-        do rawSystem "git" ["init", "--bare", "--shared", (wikiName ++ ".git")]
-           return ()
-
 dispatch :: [(String, [String] -> IO ())]
 dispatch = [ ("--remove", removeWiki) 
            , ("--init", initWiki)
+           , ("--rebuild", rebuildWiki)
            ]
 
 removeWiki :: [String] -> IO ()
@@ -59,18 +41,62 @@ setupRepo repoName setupDir = do
   setCurrentDirectory repoName
   rawSystem "git" ["add", "--all"]
   rawSystem "git" ["commit", "-m", "First commit."]
+  setCurrentDirectory ".."
   return ()
 
-cloneRepo :: String -> String -> IO ()
-cloneRepo src dst = do
-  rawSystem "git" ["clone", src, dst]
+rebuildWiki :: [String] -> IO ()
+rebuildWiki [repo] = do
+  removeDirectoryRecursive $ "public_html/" ++ repo
+  createDirectoryIfMissing False $ "public_html/" ++ repo
+  compileWiki repo
   return ()
+
+getSrcFilesRecursive :: FilePath -> IO [FilePath]
+getSrcFilesRecursive topdir = do
+  names <- getDirectoryContents topdir
+  let properNames = filter (`notElem` [".", "..", ".git"]) names
+  paths <- forM properNames $ \name -> do
+    let path = topdir </> name
+    isDirectory <- doesDirectoryExist path
+    if isDirectory
+      then getSrcFilesRecursive path
+      else return [path]
+  return (concat paths)
+
+compile :: String -> String -> IO ()
+compile input output = do
+  putStrLn $ "Compiling " ++ input ++ " to " ++ output
+  createDirectoryIfMissing True (fst (splitFileName output))
+  writeFile output "foobar"
+  rawSystem "pandoc" ["-o", output, input]
+  return ()
+
+-- wiki is without the .git
+-- repo is with the .git
+
+compileSrc :: [String] -> String -> String -> IO ()
+compileSrc [] _ _ = do
+  return ()
+compileSrc (x:xs) repo outputFolder = do
+  compile x (replace ".mdwn" ".html" (replace repo outputFolder x))
+  compileSrc xs repo outputFolder
+  return ()
+
+compileWiki :: String -> IO ()
+compileWiki repo = do
+  src <- getSrcFilesRecursive $ repo ++ ".git"
+  compileSrc src (repo ++ ".git") ("public_html/" ++ repo)
+  return ()
+  --  - pandoc -o $dst/$relativepath/$inputfile $relativepath/$inputfile
+  -- All input files are converted and written to dst.
 
 initWiki :: [String] -> IO ()
 initWiki [] = do
-  wikiName <- getWikiName
+  wiki <- getWikiName
   adminUser <- getAdminUser
-  setupRepo (wikiName ++ ".git") "etc/setup/auto-blog"
+  setupRepo (wiki ++ ".git") "etc/setup/auto-blog"
+  createDirectoryIfMissing True $ "public_html/" ++ wiki
+  rebuildWiki [wiki]
   return ()
 
 main :: IO ()

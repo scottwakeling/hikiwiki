@@ -1,6 +1,3 @@
-hikiwiki --init
-  create public_html and do an initial hikiwiki --rebuild into it
-
 staging area
   updating website/wiki/blog with git is great, but some projects might
     require a staging area because pushing straight to 'production' is scary!

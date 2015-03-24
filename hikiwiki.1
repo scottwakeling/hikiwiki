@@ -9,6 +9,9 @@ hikiwiki \- a tiny wiki compiler
 .B hikiwiki
 [\fB\-r, \-\-remove] repo
 
+.B hikiwiki
+[\fB\-\-rebuild] repo output
+
 .SH DESCRIPTION
 .B hikiwiki
 helps you build a simple wiki or blog with markdown and git.
@@ -24,7 +27,15 @@ in RL. Take a look at ikiwiki, it is far more mature and useful.
       the contents of etc/setup/auto-blog. The new repo contains an initial
       commit of files and is ready to clone and work on.
 
+      public_html is also created if not already present. This is the
+      default destination directory (see --rebuild). An initial HTML
+      version of the new repo will be found inside. You can point your
+      web server here immediately to see your new site.
+
 \-r,\ \-\-remove repo
       Deletes the repo specified.
+
+\-\-rebuild repo
+      Rebuild the named repo into the configured destination directory.
 .fi
 
