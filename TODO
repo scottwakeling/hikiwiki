@@ -1,7 +1,31 @@
+post-update
+  runs when changes come in (active branch setting in .setup?)
+  cd into src dir and pull
+  hikiwiki --rebuild repo (looks at .setup to get srcdir, dstdir etc.)
+
+hikiwiki --rebuild repo
+  loads config from repo.setup and compile srcdir into dstdir
+
 staging area
   updating website/wiki/blog with git is great, but some projects might
     require a staging area because pushing straight to 'production' is scary!
 
 templating (heist?)
+
+what does git fetch do!?
+
+what do the git config merge/branch lines in Joey's makerepo shell do?
+
+
+
+
+
+
+
+
+
+
+
+
 
 

@@ -22,20 +22,23 @@ in RL. Take a look at ikiwiki, it is far more mature and useful.
 
 .SH OPTIONS
 .nf
-\-i,\ \-\-init
-      Prompts for a repo name and owner. Creates a new shared repo based on
-      the contents of etc/setup/auto-blog. The new repo contains an initial
-      commit of files and is ready to clone and work on.
+\-\-init
+      Prompts for a wiki name and owner. Creates a new bare shared repo
+      based on the contents of etc/setup/auto-blog, clones it to make the
+      source directory, and makes an initial commit. Also creates a YAML
+      formatted configuration file.
 
-      public_html is also created if not already present. This is the
-      default destination directory (see --rebuild). An initial HTML
-      version of the new repo will be found inside. You can point your
-      web server here immediately to see your new site.
+      public_html is created if not already present. The wiki's default
+      desination directory is created in here. An initial HTML version of
+      the new repo will be found inside. You can point your web server
+      here immediately to see your new site.
 
-\-r,\ \-\-remove repo
-      Deletes the repo specified.
+\-\-remove wiki
+      Deletes the base repo, config file, and source directory for the
+      specified wiki. Leaves any build output in public_html in place.
 
-\-\-rebuild repo
-      Rebuild the named repo into the configured destination directory.
+\-\-rebuild wiki
+      Rebuilds the named wiki source directory into the configured
+      destination directory.
 .fi
 

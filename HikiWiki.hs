@@ -27,28 +27,21 @@ dispatch :: [(String, [String] -> IO ())]
 dispatch = [ ("--remove", removeWiki) 
            , ("--init", initWiki)
            , ("--rebuild", rebuildWiki)
+           , ("--version", version)
            ]
 
 removeWiki :: [String] -> IO ()
-removeWiki [repoName] = do
-  putStrLn $ "Removing repo " ++ repoName ++ " ..."
-  removeDirectoryRecursive $ repoName ++ ".git"
-
-setupRepo :: String -> String -> IO ()
-setupRepo repoName setupDir = do
-  rawSystem "cp" ["-r",  setupDir, repoName]
-  rawSystem "git" ["init", "--shared", repoName]
-  setCurrentDirectory repoName
-  rawSystem "git" ["add", "--all"]
-  rawSystem "git" ["commit", "-m", "First commit."]
-  setCurrentDirectory ".."
-  return ()
+removeWiki [wiki] = do
+  putStrLn $ "Removing " ++ wiki ++ " ..."
+  removeDirectoryRecursive $ wiki ++ ".git"
+  removeDirectoryRecursive wiki
+  removeFile (wiki ++ "-config.yaml")
 
 rebuildWiki :: [String] -> IO ()
-rebuildWiki [repo] = do
-  removeDirectoryRecursive $ "public_html/" ++ repo
-  createDirectoryIfMissing False $ "public_html/" ++ repo
-  compileWiki repo
+rebuildWiki [wiki] = do
+  removeDirectoryRecursive $ "public_html/" ++ wiki
+  createDirectoryIfMissing False $ "public_html/" ++ wiki
+  compileWiki wiki
   return ()
 
 getSrcFilesRecursive :: FilePath -> IO [FilePath]
@@ -71,33 +64,80 @@ compile input output = do
   rawSystem "pandoc" ["-o", output, input]
   return ()
 
--- wiki is without the .git
--- repo is with the .git
-
 compileSrc :: [String] -> String -> String -> IO ()
 compileSrc [] _ _ = do
   return ()
 compileSrc (x:xs) repo outputFolder = do
-  compile x (replace ".mdwn" ".html" (replace repo outputFolder x))
+  compile x (replace ".mdwn" ".html" ("public_html/" ++ x))
   compileSrc xs repo outputFolder
   return ()
 
 compileWiki :: String -> IO ()
-compileWiki repo = do
-  src <- getSrcFilesRecursive $ repo ++ ".git"
-  compileSrc src (repo ++ ".git") ("public_html/" ++ repo)
+compileWiki wiki = do
+  src <- getSrcFilesRecursive wiki
+  compileSrc src (wiki ++ ".git") ("public_html/" ++ wiki)
   return ()
-  --  - pandoc -o $dst/$relativepath/$inputfile $relativepath/$inputfile
-  -- All input files are converted and written to dst.
+
+initBareSharedRepo :: FilePath -> IO ()
+initBareSharedRepo repo = do
+  rawSystem "git" ["init", repo, "--bare", "--shared"]
+  return ()
+
+installPostUpdateHook :: String -> IO ()
+installPostUpdateHook wiki = do
+  let updateHookPath = (wiki ++ ".git/hooks/post-update")
+  fd <- openFile updateHookPath WriteMode
+  hPutStrLn fd "#!/bin/sh\n"
+  hPutStrLn fd "cd .."
+  hPutStrLn fd ("./HikiWiki --rebuild " ++ wiki)
+  hClose fd
+  perms <- getPermissions updateHookPath
+  setPermissions updateHookPath (perms {executable = True})
+
+writeSetupFileLine :: Handle -> (String,String) -> IO ()
+writeSetupFileLine fd setting = do
+  hPutStrLn fd (fst setting ++ ": " ++ snd setting)
+
+createSetupFileFor :: String -> [(String,String)] -> IO ()
+createSetupFileFor wiki settings = do
+  fd <- openFile (wiki ++ "-config.yaml") WriteMode
+  hPutStrLn fd "# HikiWiki - YAML formatted config file\n"
+  mapM (writeSetupFileLine fd) settings
+  hClose fd
+
+createDestDir :: String -> IO ()
+createDestDir wiki = do
+  createDirectoryIfMissing True $ "public_html/" ++ wiki
+  return ()
+
+createSrcDir :: String -> FilePath -> IO ()
+createSrcDir wiki etc = do
+  rawSystem "git" ["clone", (wiki ++ ".git"), wiki]
+  rawSystem "cp" ["-r",  (etc ++ "/."), wiki]
+  setCurrentDirectory wiki
+  rawSystem "git" ["add", "--all"]
+  rawSystem "git" ["commit", "-m", "First commit."]
+  rawSystem "git" ["push", "origin", "master"]
+  return ()
 
 initWiki :: [String] -> IO ()
 initWiki [] = do
   wiki <- getWikiName
   adminUser <- getAdminUser
-  setupRepo (wiki ++ ".git") "etc/setup/auto-blog"
-  createDirectoryIfMissing True $ "public_html/" ++ wiki
-  rebuildWiki [wiki]
+  let repo = (wiki ++ ".git")
+  initBareSharedRepo repo
+  installPostUpdateHook wiki
+  createDestDir wiki
+  createSetupFileFor wiki [ ("wikiname", wiki)
+                          , ("srcdir", wiki)
+                          , ("destdir", "public_html/" ++ wiki)
+                          ]
+  createSrcDir wiki "etc/setup/auto-blog"
   return ()
+
+version :: [String] -> IO ()
+version [] = do
+  putStrLn "HikiWiki v0.1"
 
 main :: IO ()
 main = do
