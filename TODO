@@ -1,7 +1,16 @@
+Learn and apply some basic Haddock doc
+
+I like :reload in ghci to see if it's compiling
+  but running a simple test suite as part of make.sh would be even better!
+
+install HikiWiki as part of make.sh (post-update then HikiWiki, not ./HikiWiki)
+
+Improve the command line parsing (RWH late chapter)
+
 post-update
   runs when changes come in (active branch setting in .setup?)
   cd into src dir and pull
-  hikiwiki --rebuild repo (looks at .setup to get srcdir, dstdir etc.)
+  hikiwiki --rebuild repo (looks at .setup to get srcdir, dstdir etc. ?)
 
 hikiwiki --rebuild repo
   loads config from repo.setup and compile srcdir into dstdir
@@ -15,17 +24,5 @@ templating (heist?)
 what does git fetch do!?
 
 what do the git config merge/branch lines in Joey's makerepo shell do?
-
-
-
-
-
-
-
-
-
-
-
-
 
 
