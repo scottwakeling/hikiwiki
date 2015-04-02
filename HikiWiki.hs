@@ -1,3 +1,7 @@
+--
+---- Copyright (c) 2015 Scott Wakeling - http://www.diskfish.org/
+---- GPL version 3 or later (see http://www.gnu.org/licenses/gpl.html)
+--
 import System.IO
 import System.Cmd
 import System.Environment
