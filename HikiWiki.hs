@@ -60,8 +60,8 @@ getWikiName = do
  - -}
 dispatch :: [(String, [String] -> IO ())]
 dispatch = [ ("--remove", removeWiki) 
-           , ("--init", initWiki)
-           , ("--rebuild", rebuildWiki)
+           , ("--init", initWikiCommand)
+           , ("--rebuild", rebuildWikiCommand)
            , ("--version", version)
            ]
 
@@ -84,16 +84,22 @@ removeWiki [wiki] = do
 
 {-
  - Command: --rebuild wiki
- - Deletes the destination directory and recompiles the wiki.
- - TOOD: Separate out command code into a typed function that takes a Wiki?
  - -}
-rebuildWiki :: [String] -> IO ()
-rebuildWiki [wiki] = do
+rebuildWikiCommand :: [String] -> IO ()
+rebuildWikiCommand [wiki] = do
+  rebuildWiki (StringToWikiName wiki)
+
+
+{-
+ - Deletes the destination directory and recompiles the wiki specified.
+ - -}
+rebuildWiki :: WikiName -> IO ()
+rebuildWiki wikiName = do
+  let wiki = wikiNameToString wikiName
   removeDirectoryRecursive $ "public_html/" ++ wiki
   createDirectoryIfMissing False $ "public_html/" ++ wiki
   compileWiki wiki
-  return ()
-
+  
 
 {-
  - Returns a recursive list of all file paths in the directory specified
@@ -163,14 +169,20 @@ initBareSharedRepo repoLocation = do
 
 {-
  - Creates and chmod ugo+x a post-update hook shell script in the Repo
- - provided.
+ - provided. Note that git commands use GIT_DIR instead of PWD, so we need to
+ - unset that to have 'cd' commands take effect and git pull to work etc.
+ -
+ - TODO: Assumes wiki is .. and the src dir is named after the repo sans .git.
  - -}
 installPostUpdateHook :: Repo -> IO ()
 installPostUpdateHook repo = do
+  putStrLn "Installing post-update hook.."
   let updateHookPath = (getRepoLocation repo ++ "/hooks/post-update")
   fd <- openFile updateHookPath WriteMode
   hPutStrLn fd "#!/bin/sh\n"
-  hPutStrLn fd "cd .."
+  hPutStrLn fd "unset GIT_DIR"
+  hPutStrLn fd ("cd ../" ++ getRepoName repo)
+  hPutStrLn fd "pwd; git pull; cd .."
   hPutStrLn fd ("./HikiWiki --rebuild " ++ getRepoName repo)
   hClose fd
   perms <- getPermissions updateHookPath
@@ -180,14 +192,17 @@ installPostUpdateHook repo = do
 {-
  - Creates a $WIKI-setup.yaml file containing the key,value pairs provided.
  - -}
-createSetupFileFor :: WikiName -> [(String,String)] -> IO ()
+createSetupFileFor :: WikiName -> [(String,String)] -> IO FilePath
 createSetupFileFor wikiName settings = do
-  fd <- openFile (wikiNameToString wikiName ++ "-config.yaml") WriteMode
+  putStrLn "Creating setup yaml.."
+  fd <- openFile configFile WriteMode
   hPutStrLn fd "# HikiWiki - YAML formatted config file\n"
   mapM (writeSetupFileLine fd) settings
   hClose fd
+  canonicalizePath configFile
       where writeSetupFileLine fd setting = do
                 hPutStrLn fd (fst setting ++ ": " ++ snd setting)
+            configFile = wikiNameToString wikiName ++ "-config.yaml"
 
 
 {-
@@ -195,10 +210,12 @@ createSetupFileFor wikiName settings = do
  - TODO: Assumes public_html is in . Should read it from config, or be passed
  -       the 'publish dir' or something?
  - -}
-createDestDir :: WikiName -> IO ()
+createDestDir :: WikiName -> IO FilePath
 createDestDir wikiName = do
-  createDirectoryIfMissing True $ "public_html/" ++ wikiNameToString wikiName
-  return ()
+  putStrLn "Creating publish dir.."
+  let destDir = "public_html/" ++ wikiNameToString wikiName
+  createDirectoryIfMissing True destDir
+  canonicalizePath destDir
 
 
 {-
@@ -207,44 +224,52 @@ createDestDir wikiName = do
  -       Should take a Repo/RepoLocation and WikiName?
  -       Or, gets a wiki config and src dir and repo loc is in there..?
  - -}
-createSrcDir :: WikiName -> FilePath -> IO ()
+createSrcDir :: WikiName -> FilePath -> IO FilePath
 createSrcDir wikiName etc = do
+  putStrLn "Creating src dir.."
   let wiki = wikiNameToString wikiName
   rawSystem "git" ["clone", (wiki ++ ".git"), wiki]
+  putStrLn "Copying base template to src dir.."
   rawSystem "cp" ["-r",  (etc ++ "/."), wiki]
   setCurrentDirectory wiki
   rawSystem "git" ["add", "--all"]
   rawSystem "git" ["commit", "-m", "First commit."]
+  putStr "Pushing first commit.."
   rawSystem "git" ["push", "origin", "master"]
-  return ()
+  putStrLn " done!"
+  setCurrentDirectory ".."
+  canonicalizePath wiki
 
 
 {-
  - Command: --init
  - Creates a bare shared base repo, src/dest dirs, and wiki -config.yaml file.
- - TODO: As for other commands, separate command function from internals for a
- -       typed interface. Probably return a Wiki too..
  - -}
-initWiki :: [String] -> IO ()
-initWiki [] = do
-  wikiName <- getWikiName
+initWikiCommand :: [String] -> IO ()
+initWikiCommand _ = do
+    wikiName <- getWikiName
+    initWiki wikiName
+    return ()
+
+initWiki :: WikiName -> IO Wiki
+initWiki wikiName = do
   let repoPath = (wikiNameToString wikiName ++ ".git")
-  installPostUpdateHook <- initBareSharedRepo repoPath
-  createDestDir wikiName
+  repo <- initBareSharedRepo repoPath
+  destDir <- createDestDir wikiName
   let wiki = wikiNameToString wikiName
-  createSetupFileFor wikiName [ ("wikiname", wiki)
-                              , ("srcdir", wiki)
-                              , ("destdir", "public_html/" ++ wiki)
-                              ]
-  createSrcDir wikiName "etc/setup/auto-blog"
-  return ()
+  configFile <- createSetupFileFor wikiName [ ("wikiname", wiki)
+                                            , ("srcdir", wiki)
+                                            , ("destdir", "public_html/" ++ wiki)
+                                            ]
+  srcDir <- createSrcDir wikiName "etc/setup/auto-blog"
+  installPostUpdateHook repo
+  return (LocalWiki wikiName repo srcDir destDir configFile)
 
 
 {-
- - Prints a simple version string.
+ - The current HikiWiki version string.
  - -}
-printVersionString :: IO ()
-printVersionString = putStrLn "HikiWiki v0.1"
+getVersionString = "HikiWiki v0.1"
 
 
 {-
@@ -252,7 +277,7 @@ printVersionString = putStrLn "HikiWiki v0.1"
  - Prints a simple version string.
  - -}
 version :: [String] -> IO ()
-version [] = printVersionString
+version [] = putStrLn getVersionString
 
 
 {-
