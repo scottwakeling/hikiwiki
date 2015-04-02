@@ -3,4 +3,4 @@
 Hello, hikiwiki.
 
 
-This blog is powered by [HikiWiki](http://git.diskfish.org/hikiwiki).
+This blog is powered by [HikiWiki](http://git.diskfish.org/?=hikiwiki.git).
