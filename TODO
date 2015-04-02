@@ -1,12 +1,18 @@
+no error message at all if pandoc not installed!
+
+--init should end with a rebuild, ready to go..
+
 Wrap in a cabal package? Is that a build system aswell?
 	- depends: regex-posix, MissingH
+	- install HikiWiki (post-update can then HikiWiki, not ./HikiWiki, and
+		won't need hacky etc folder laying around, /etc/.hikiwiki)
 
 Learn and apply some basic Haddock doc
 
 I like :reload in ghci to see if it's compiling
   but running a simple test suite as part of make.sh would be even better!
 
-install HikiWiki as part of make.sh (post-update then HikiWiki, not ./HikiWiki)
+
 
 Improve the command line parsing (RWH late chapter)
 
