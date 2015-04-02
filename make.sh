@@ -1,5 +1,3 @@
 #!/bin/sh
 
-./clean.sh
-ghc --make HikiWiki.hs
-
+cabal install -j
