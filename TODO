@@ -1,4 +1,5 @@
 Wrap in a cabal package? Is that a build system aswell?
+	- depends: regex-posix, MissingH
 
 Learn and apply some basic Haddock doc
 
