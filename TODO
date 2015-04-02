@@ -29,20 +29,6 @@ what does git fetch do!?
 
 what do the git config merge/branch lines in Joey's makerepo shell do?
 
-Manual Test
-
-ssh to remote server
-HikiWiki --init
-repo1
-back to localhost
-git clone repo1 from remote server
-make changes and push
-remote server needs to:
-  run post-update
-  cd into src folder
-  git pull
-  --rebuild repo1
-
 
 
 
