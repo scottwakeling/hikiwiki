@@ -182,7 +182,8 @@ installPostUpdateHook repo = do
   hPutStrLn fd "#!/bin/sh\n"
   hPutStrLn fd "unset GIT_DIR"
   hPutStrLn fd ("cd ../" ++ getRepoName repo)
-  hPutStrLn fd "pwd; git pull; cd .."
+  hPutStrLn fd "git pull"
+  hPutStrLn fd "cd .."
   hPutStrLn fd ("./HikiWiki --rebuild " ++ getRepoName repo)
   hClose fd
   perms <- getPermissions updateHookPath
