@@ -1,20 +1,18 @@
 .TH hikiwiki 1 "March 2015"
 .SH NAME
-hikiwiki \- a tiny wiki compiler
+hikiwiki \- A static markdown compiler built on git and pandoc.
 
 .SH SYNOPSIS
 .B hikiwiki
-[\fB\-i, \-\-init]
+[\fB\-\-init]
 
 .B hikiwiki
-[\fB\-r, \-\-remove] repo
+[\fB\-\-remove] wiki
 
 .B hikiwiki
-[\fB\-\-rebuild] repo output
+[\fB\-\-rebuild] wiki
 
 .SH DESCRIPTION
-.B hikiwiki
-helps you build a simple wiki or blog with markdown and git.
 .PP
 This is probably not the wiki compiler you are looking for. I wrote it as a
 learning exercise in Haskell, so it misses many, many features you will need
@@ -23,19 +21,22 @@ in RL. Take a look at ikiwiki, it is far more mature and useful.
 .SH OPTIONS
 .nf
 \-\-init
-      Prompts for a wiki name and owner. Creates a new bare shared repo
-      based on the contents of etc/setup/auto-blog, clones it to make the
-      source directory, and makes an initial commit. Also creates a YAML
-      formatted configuration file.
+      Creates a whole new wiki, comprising a bare shared repo based on the
+      contents of etc/setup/auto-blog, a source directory cloned from this
+      repo, containing an initial commit, and a YAML formatted config file.
 
       public_html is created if not already present. The wiki's default
       desination directory is created in here. An initial HTML version of
-      the new repo will be found inside. You can point your web server
+      the new wiki will be found inside. You can point your web server
       here immediately to see your new site.
+
+      An entry for each new wiki is made in ~/.hikiwiki/wikilist, mapping
+      the wiki's name to the absolute location of its YAML config file.
 
 \-\-remove wiki
       Deletes the base repo, config file, and source directory for the
       specified wiki. Leaves any build output in public_html in place.
+      Removes the wiki's entry from ~/.hikiwiki/wikilist
 
 \-\-rebuild wiki
       Rebuilds the named wiki source directory into the configured

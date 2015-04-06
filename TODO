@@ -1,18 +1,24 @@
+srcdir and destdir need to be absolute paths in config yaml
+
+init
+  registers the wikiname and config filepath in ~/.hikiwiki/wikilist
+  can be used to create a base repo, dest dir and wikilist entry for content
+    in an existing src dir (i.e. a clone from another remote, for example)
+  this mode prompts you for what the new 'remote' should be called, if
+    hikiwiki sees existing remotes already against the seeding src dir
+
 no error message at all if pandoc not installed!
 
 --init should end with a rebuild, ready to go..
 
-Wrap in a cabal package? Is that a build system aswell?
-	- depends: regex-posix, MissingH
-	- install HikiWiki (post-update can then HikiWiki, not ./HikiWiki, and
-		won't need hacky etc folder laying around, /etc/.hikiwiki)
+- install HikiWiki as part of build
+  (post-update can then HikiWiki, not ./HikiWiki, and
+   won't need hacky etc folder laying around, ~/.hikiwiki/etc)
 
 Learn and apply some basic Haddock doc
 
 I like :reload in ghci to see if it's compiling
   but running a simple test suite as part of make.sh would be even better!
-
-
 
 Improve the command line parsing (RWH late chapter)
 

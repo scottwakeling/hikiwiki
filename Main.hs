@@ -63,11 +63,16 @@ getWikiName = do
  - Dispatch table, maps command line arguments to command processor functions.
  - -}
 dispatch :: [(String, [String] -> IO ())]
-dispatch = [ ("--remove", removeWiki) 
+dispatch = [ ("--remove", removeWikiCommand) 
            , ("--init", initWikiCommand)
            , ("--rebuild", rebuildWikiCommand)
-           , ("--version", version)
+           , ("--version", versionCommand)
            ]
+
+
+--TODO...
+--loadWikiConfig :: WikiName -> IO Wiki
+--loadWikiConfig wikiName = do
 
 
 {- 
@@ -78,12 +83,19 @@ dispatch = [ ("--remove", removeWiki)
  -      out from the action code. I know both parts are impure, but it gives
  -      you a typed interface instread of just [String] everywhere..
  - -}
-removeWiki :: [String] -> IO ()
-removeWiki [wiki] = do
+removeWikiCommand :: [String] -> IO ()
+removeWikiCommand [wiki] = do
+  removeWiki (StringToWikiName wiki)
+
+
+removeWiki :: WikiName -> IO ()
+removeWiki wikiName = do
+  let wiki = wikiNameToString wikiName
   putStrLn $ "Removing " ++ wiki ++ " ..."
-  removeDirectoryRecursive $ wiki ++ ".git"
+  removeDirectoryRecursive (wiki ++ ".git")
   removeDirectoryRecursive wiki
   removeFile (wiki ++ "-config.yaml")
+  unregisterWiki wikiName
 
 
 {-
@@ -247,6 +259,65 @@ createSrcDir wikiName etc = do
 
 
 {-
+ - Returns the filepath of the per-user hikiwiki wikilist file.
+ - -}
+wikiListFilePath :: IO FilePath
+wikiListFilePath = do
+  home <- getHomeDirectory
+  createDirectoryIfMissing False (home ++ "/.hikiwiki")
+  return (home ++ "/.hikiwiki/wikilist")
+
+
+{-
+ - Returns a file descriptor for ~/.hikiwiki/wikilist with the specified
+ - privileges. Creates ~/.hikiwiki dir and wikilist file if they don't exist
+ - yet.
+ - -}
+getWikiListFile :: IOMode -> IO Handle
+getWikiListFile ioMode = do
+  wikiListFile <- wikiListFilePath
+  openFile wikiListFile ioMode
+
+
+{-
+ - Registers a wiki in ~/.hikiwiki/wikilist as a space-separated WikiName
+ - and config filepath.
+ - -}
+registerWiki :: WikiName -> FilePath -> IO ()
+registerWiki wikiName configFilePath = do
+  wikiListFile <- getWikiListFile AppendMode
+  hPutStrLn wikiListFile ((wikiNameToString wikiName) ++ " " ++ configFilePath)
+  hClose wikiListFile
+  return ()
+
+
+{-
+ - Unregisters a wiki by removing its entry from ~/.hikiwiki/wikilist
+ - -}
+unregisterWiki :: WikiName -> IO ()
+unregisterWiki wikiName = do
+  wikiList <- getWikiList
+  let dropWiki = wikiNameToString wikiName
+  let keepWikis = filter (\wiki -> not (wiki =~ ("^" ++ dropWiki ++ " "))) wikiList
+  wikiListFilePath >>= removeFile
+  newWikiListFile <- getWikiListFile WriteMode
+  hPutStr newWikiListFile (unlines keepWikis)
+  hClose newWikiListFile
+  return ()
+
+
+{-
+ - Returns the contents of ~/.hikiwiki/wikilist
+ - -}
+getWikiList :: IO [String]
+getWikiList = do
+  xs <- (wikiListFilePath >>= readFile)
+  forceList xs
+  return (lines xs)
+  where forceList = foldr (\_ m -> m) (return ())
+
+
+{-
  - Command: --init
  - Creates a bare shared base repo, src/dest dirs, and wiki -config.yaml file.
  - -}
@@ -268,21 +339,22 @@ initWiki wikiName = do
                                             ]
   srcDir <- createSrcDir wikiName "etc/setup/auto-blog"
   installPostUpdateHook repo
+  registerWiki wikiName configFile
   return (LocalWiki wikiName repo srcDir destDir configFile)
 
 
 {-
  - The current HikiWiki version string.
  - -}
-getVersionString = "HikiWiki v0.1"
+getVersionString = "HikiWiki v0.1.0.0"
 
 
 {-
  - Command: --version
  - Prints a simple version string.
  - -}
-version :: [String] -> IO ()
-version [] = putStrLn getVersionString
+versionCommand :: [String] -> IO ()
+versionCommand [] = putStrLn getVersionString
 
 
 {-
