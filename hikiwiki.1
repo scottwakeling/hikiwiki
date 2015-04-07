@@ -39,7 +39,11 @@ in RL. Take a look at ikiwiki, it is far more mature and useful.
       Removes the wiki's entry from ~/.hikiwiki/wikilist
 
 \-\-rebuild wiki
-      Rebuilds the named wiki source directory into the configured
-      destination directory.
+      Rebuilds the named wiki into the configured publish directory.
+      
+      HikiWiki uses this command to compile any changes you push to your
+      wiki's base repo, but you can also use it to test changes made to a
+      local clone before pushing them anywhere else. In this case, use the
+      name of the clone directory as $wiki.
 .fi
 
