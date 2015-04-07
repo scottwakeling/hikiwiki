@@ -1,7 +1,6 @@
 srcdir and destdir need to be absolute paths in config yaml
 
 init
-  registers the wikiname and config filepath in ~/.hikiwiki/wikilist
   can be used to create a base repo, dest dir and wikilist entry for content
     in an existing src dir (i.e. a clone from another remote, for example)
   this mode prompts you for what the new 'remote' should be called, if

@@ -112,8 +112,12 @@ rebuildWikiCommand [wiki] = do
 rebuildWiki :: WikiName -> IO ()
 rebuildWiki wikiName = do
   let wiki = wikiNameToString wikiName
-  removeDirectoryRecursive $ "public_html/" ++ wiki
-  createDirectoryIfMissing False $ "public_html/" ++ wiki
+  let publishDir = "public_html/" ++ wiki
+  publishDirExists <- doesDirectoryExist publishDir
+  if publishDirExists
+    then removeDirectoryRecursive publishDir
+    else putStrLn ("Creating " ++ publishDir)
+  createDirectoryIfMissing True publishDir
   compileWiki wiki
   
 
@@ -229,7 +233,6 @@ createSetupFileFor wikiName settings = do
  - -}
 createDestDir :: WikiName -> IO FilePath
 createDestDir wikiName = do
-  putStrLn "Creating publish dir.."
   let destDir = "public_html/" ++ wikiNameToString wikiName
   createDirectoryIfMissing True destDir
   canonicalizePath destDir
