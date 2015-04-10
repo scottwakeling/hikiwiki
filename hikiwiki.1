@@ -4,13 +4,13 @@ hikiwiki \- A static markdown compiler built on git and pandoc.
 
 .SH SYNOPSIS
 .B hikiwiki
-[\fB\-\-init]
+[\fBinit]
 
 .B hikiwiki
-[\fB\-\-remove] wiki
+[\fBremove] wiki
 
 .B hikiwiki
-[\fB\-\-rebuild] wiki
+[\fBrebuild] wiki
 
 .SH DESCRIPTION
 .PP
@@ -20,30 +20,30 @@ in RL. Take a look at ikiwiki, it is far more mature and useful.
 
 .SH OPTIONS
 .nf
-\-\-init
-      Creates a whole new wiki, comprising a bare shared repo based on the
-      contents of etc/setup/auto-blog, a source directory cloned from this
-      repo, containing an initial commit, and a YAML formatted config file.
+init
+    Creates a whole new wiki, comprising a bare shared repo based on the
+    contents of etc/setup/auto-blog, a source directory cloned from this
+    repo, containing an initial commit, and a YAML formatted config file.
 
-      public_html is created if not already present. The wiki's default
-      desination directory is created in here. An initial HTML version of
-      the new wiki will be found inside. You can point your web server
-      here immediately to see your new site.
+    public_html is created if not already present. The wiki's default
+    desination directory is created in here. An initial HTML version of
+    the new wiki will be found inside. You can point your web server
+    here immediately to see your new site.
 
-      An entry for each new wiki is made in ~/.hikiwiki/wikilist, mapping
-      the wiki's name to the absolute location of its YAML config file.
+    An entry for each new wiki is made in ~/.hikiwiki/wikilist, mapping
+    the wiki's name to the absolute location of its YAML config file.
 
-\-\-remove wiki
-      Deletes the base repo, config file, and source directory for the
-      specified wiki. Leaves any build output in public_html in place.
-      Removes the wiki's entry from ~/.hikiwiki/wikilist
+remove wiki
+    Deletes the base repo, config file, and source directory for the
+    specified wiki. Leaves any build output in public_html in place.
+    Removes the wiki's entry from ~/.hikiwiki/wikilist
 
-\-\-rebuild wiki
-      Rebuilds the named wiki into the configured publish directory.
+rebuild wiki
+    Rebuilds the named wiki into the configured publish directory.
       
-      HikiWiki uses this command to compile any changes you push to your
-      wiki's base repo, but you can also use it to test changes made to a
-      local clone before pushing them anywhere else. In this case, use the
-      name of the clone directory as $wiki.
+    HikiWiki uses this command to compile any changes you push to your
+    wiki's base repo, but you can also use it to test changes made to a
+    local clone before pushing them anywhere else. In this case, use the
+    name of the clone directory as $wiki.
 .fi
 

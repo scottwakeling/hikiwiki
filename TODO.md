@@ -4,9 +4,6 @@
 
 Templating with Heist?
 
-For every file you compile to html
-    wrap the generated file contents in the cayman .tpl
-
 Be able to specify a theme to wrap generated html in
 
 
