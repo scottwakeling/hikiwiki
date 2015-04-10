@@ -1,6 +1,33 @@
-srcdir and destdir need to be absolute paths in config yaml
+# TODO
 
-no error message at all if pandoc not installed!
+## Themes
+
+Templating with Heist?
+
+For every file you compile to html
+    wrap the generated file contents in the cayman .tpl
+
+Be able to specify a theme to wrap generated html in
+
+
+## Documentation
+
+Add a Files seciton to man page
+  wikilist
+  /etc
+
+
+## Configuration
+
+Source and Publish dirs need to be absolute paths in config yaml
+
+
+## Bugs
+
+Irrefutable pattern passing HikiWiki unrecognised cmd line args
+
+No error message is given if pandoc is not installed
+    Is this still an issue? .cabal require it?
 
 --init should end with a rebuild, ready to go..
 
@@ -12,7 +39,8 @@ Going to have:
   ~/.hikiwiki/wikilist|etc|themese|plugins
 Not going to have /etc/.hikiwiki until you explicitly handle sudo invocation
 
-Learn and apply some basic Haddock doc
+
+## Testing
 
 I like :reload in ghci to see if it's compiling
   but running a simple test suite as part of make.sh would be even better!
@@ -30,13 +58,19 @@ staging area
     production wiki out and use --init to create a new remote and dst dir in
     place for a staging area people can clone from and push to..
 
-templating (heist?)
 
-plugins
+
+## Plugins
 
 hikiwiki theme install foo
 hikiwiki plugin install bar
-
+  lightweight 'package' system
+    'hikis'
+    user-wide, and system-wide hiki DBs
+    hpkg cmd line tool hpkg -i etc.
+    hiki server/hpkg config to point at mirrors etc.
+    hpkg rollback .. interesting.. the DBs are git repos..?
+    you'd learn a lot from this
 
 
 
