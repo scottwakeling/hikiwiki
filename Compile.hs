@@ -30,9 +30,9 @@ compile :: FilePath -> FilePath -> String -> IO ()
 compile input output theme = do
     putStrLn $ "Compiling " ++ input ++ " to " ++ output
     createDirectoryIfMissing True (fst (splitFileName output))
-    rawSystem "pandoc" [ "/home/scott/src/hikiwiki/etc/themes/" ++ theme ++ "/pre.mdwn"
+    rawSystem "pandoc" [ "/home/scott/hikiwiki/etc/themes/" ++ theme ++ "/pre.mdwn"
                        , input
-                       , "/home/scott/src/hikiwiki/etc/themes/" ++ theme ++ "/post.mdwn"
+                       , "/home/scott/hikiwiki/etc/themes/" ++ theme ++ "/post.mdwn"
                        , "-o"
                        , output
                        ]
