@@ -15,24 +15,8 @@ import System.Directory
 import System.FilePath.Posix
 import Text.Regex.Posix
 
-
-{-
- - Returns a recursive list of all file paths in the directory specified
- - excluding ., .., and .git.
- - TODO: Take a glob filter, so we can ask for all .mdwn, for example.
- - -}
-getSrcFilesRecursive :: FilePath -> IO [FilePath]
-getSrcFilesRecursive topdir = do
-    names <- getDirectoryContents topdir
-    let properNames = filter (`notElem` [".", "..", ".git"]) names
-    paths <- forM properNames $ \name -> do
-        let path = topdir </> name
-        isDirectory <- doesDirectoryExist path
-        case isDirectory of
-            True    -> getSrcFilesRecursive path
-            False   -> return [path]
-    return (concat paths)
-
+import Compile.Internal
+import Yaml
 
 {-
  - Compiles input .mdwn file to output .html file.
@@ -42,13 +26,13 @@ getSrcFilesRecursive topdir = do
  -
  - TODO: Refactor the post-processing out of here..
  - -}
-compile :: FilePath -> FilePath -> IO ()
-compile input output = do
+compile :: FilePath -> FilePath -> String -> IO ()
+compile input output theme = do
     putStrLn $ "Compiling " ++ input ++ " to " ++ output
     createDirectoryIfMissing True (fst (splitFileName output))
-    rawSystem "pandoc" [ "/home/scott/src/hikiwiki/etc/themes/cayman/pre.mdwn"
+    rawSystem "pandoc" [ "/home/scott/src/hikiwiki/etc/themes/" ++ theme ++ "/pre.mdwn"
                        , input
-                       , "/home/scott/src/hikiwiki/etc/themes/cayman/post.mdwn"
+                       , "/home/scott/src/hikiwiki/etc/themes/" ++ theme ++ "/post.mdwn"
                        , "-o"
                        , output
                        ]
@@ -68,12 +52,12 @@ compile input output = do
  - replacing the .mdwn extensions with .html
  - TOOD: Should not assume public_html is in .
  - -}
-compileSrc :: [FilePath] -> IO ()
-compileSrc [] = do
+compileSrc :: [FilePath] -> String -> IO ()
+compileSrc [] _ = do
     return ()
-compileSrc (x:xs) = do
-    compile x (replace ".mdwn" ".html" ("public_html/" ++ x))
-    compileSrc xs
+compileSrc (x:xs) theme = do
+    compile x (replace ".mdwn" ".html" ("public_html/" ++ x)) theme
+    compileSrc xs theme
     return ()
 
 
@@ -81,23 +65,33 @@ compileSrc (x:xs) = do
  - Compiles all input files in the source directory provided to the default
  - destination directory.
  -
- - Copies the default (cayman) theme's stylesheets into the publish dir.
- -
  - TODO: Assumes the src dir and public_html are in .
  -       Should take a Wiki?
  -       Should only pass source files (e.g. .mdwn) to compileSrc, not
  -       everything in the location provided..
- -       Should read theme from the provided Wiki config, not assume cayman.
  - -}
-compileWiki :: FilePath -> IO ()
-compileWiki wiki = do
-    src <- getSrcFilesRecursive wiki
-    compileSrc src
-    rawSystem "cp" [ "-r"
-                   , "etc/themes/cayman/stylesheets/"
-                   , "public_html/" ++ wiki
-                   ]
-    return ()
+compileWiki :: [(String,String)] -> IO (Bool)
+compileWiki wikiConfig = do
+    let wiki = lookupYaml "wikiname" wikiConfig
+    case wiki of
+        Nothing -> (return False)
+        Just wiki -> do
+            tryCompile wiki
+            (return True)
+  where
+    tryCompile wiki = do
+        src <- getSrcFilesRecursive wiki
+        let theme = (themeName wikiConfig)
+        compileSrc src theme
+        putStrLn $ "Copying stylesheets for " ++ theme
+        rawSystem "cp" [ "-r"
+                       , "etc/themes/" ++ theme ++ "/stylesheets/"
+                       , "public_html/" ++ wiki
+                       ]
+    themeName :: [(String,String)] -> String
+    themeName wikiConfig = case (lookupYaml "theme" wikiConfig) of
+        Nothing -> "cayman"
+        Just theme -> theme
 
 
 

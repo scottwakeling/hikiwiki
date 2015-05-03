@@ -1,29 +1,48 @@
 import Test.HUnit
 
-safeHead :: [a] -> Maybe a
-safeHead []    = Nothing
-safeHead (x:_) = Just x
+import Yaml
+
+test_decodeYamlLine :: Test
+test_decodeYamlLine =
+    TestCase $ assertEqual "Decode yaml into (key,value)"
+    ("wikiname","testwiki") $ decodeYamlLine "wikiname: testwiki"
 
 
-testSafeHeadForEmptyList :: Test
-testSafeHeadForEmptyList = 
-    TestCase $ assertEqual "Should return Nothing for empty list"
-    Nothing (safeHead ([]::[Int]))
+test_decodeYamlLines :: Test
+test_decodeYamlLines =
+    TestCase $ assertEqual "Decode list of yaml lines into list of\
+                            \(key,value) tuples."
+    [ ("wikiname","testwiki")
+    , ("srcdir", "/home/test/testwiki")
+    ]
+    (decodeYamlLines [ "wikiname: testwiki"
+                     , "srcdir: /home/test/testwiki"
+                     ])
 
 
-testSafeHeadForNonEmptyList :: Test
-testSafeHeadForNonEmptyList = 
-    TestCase $ assertEqual "Should return (Just head) for non empty list"
-    (Just 1) (safeHead ([1]::[Int]))
+test_decodeYamlMarkdownHeader :: Test
+test_decodeYamlMarkdownHeader =
+    TestCase $ assertEqual "Decode only the yaml lines from a markdown header\
+                            \that starts and stops with '---'"
+    [ ("wikiname","testwiki")
+    , ("srcdir", "/home/test/testwiki")
+    ]
+    (decodeYamlMarkdownHeader [ "---"
+                              , "wikiname: testwiki"
+                              , "srcdir: /home/test/testwiki"
+                              , "---"
+                              ])
 
 
-pushTest :: Test
-pushTest = TestCase $ assertEqual "Pushing to an empty list should give length=1"
-    1 (length (1 : []))
+test_lookupYaml :: Test
+test_lookupYaml = 
+    TestCase $ assertEqual "Failed to look up value for an existing key."
+    (Just "bar") $ lookupYaml "foo" [("key","value"),("foo","bar")]
 
 
 main :: IO Counts
-main = runTestTT $ TestList [ testSafeHeadForEmptyList
-                            , testSafeHeadForNonEmptyList
-                            , pushTest
+main = runTestTT $ TestList [ test_decodeYamlLines
+                            , test_decodeYamlLine
+                            , test_decodeYamlMarkdownHeader
+                            , test_lookupYaml
                             ]

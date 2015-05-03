@@ -16,7 +16,7 @@ import System.IO
 import Text.Regex.Posix
 
 import Compile
-
+import Yaml
 
 {- Repo
  - -}
@@ -47,18 +47,18 @@ getRepoName repo = repoName (splitRepoPath (getRepoLocation repo))
  - Wiki
  - -}
 newtype WikiName = StringToWikiName {wikiNameToString :: String}
+type Dictionary = [(String,String)]
 
-data Wiki = LocalWiki
+data WikiConfig = WikiConfig
     { name :: WikiName
-    , baseRepo :: Repo
-    , srcDir :: FilePath
-    , dstDir :: FilePath
-    , config :: FilePath
+    , config :: Dictionary
     }
 
 
 {-
  - Reads a wiki name frm stdin.
+ -
+ - TODO: Make this getWikiConfig, and ask for default theme etc.?
  - -}
 getWikiName :: IO WikiName
 getWikiName = do
@@ -76,11 +76,6 @@ dispatch = [ ("remove", removeWikiCommand)
            , ("rebuild", rebuildWikiCommand)
            , ("version", versionCommand)
            ]
-
-
---TODO...
---loadWikiConfig :: WikiName -> IO Wiki
---loadWikiConfig wikiName = do
 
 
 {- 
@@ -112,12 +107,13 @@ removeWiki wikiName = do
 rebuildWikiCommand :: [String] -> IO ()
 rebuildWikiCommand [wiki] = do
     rebuildWiki (StringToWikiName wiki)
+    return ()
 
 
 {-
  - Deletes the destination directory and recompiles the wiki specified.
  - -}
-rebuildWiki :: WikiName -> IO ()
+rebuildWiki :: WikiName -> IO Bool
 rebuildWiki wikiName = do
     let wiki = wikiNameToString wikiName
     let publishDir = "public_html/" ++ wiki
@@ -126,7 +122,7 @@ rebuildWiki wikiName = do
         True    -> removeDirectoryRecursive publishDir
         False   -> putStrLn ("Creating " ++ publishDir)
     createDirectoryIfMissing True publishDir
-    compileWiki wiki
+    (loadWikiConfig wikiName >>= compileWiki)
 
 
 {- Creates a bare shared repo at the location specified.
@@ -278,7 +274,6 @@ getWikiList = do
 
 {-
  - Command: --init
- - Creates a bare shared base repo, src/dest dirs, and wiki -config.yaml file.
  - -}
 initWikiCommand :: [String] -> IO ()
 initWikiCommand _ = do
@@ -286,7 +281,10 @@ initWikiCommand _ = do
     initWiki wikiName
     return ()
 
-initWiki :: WikiName -> IO Wiki
+{-
+ - Creates a bare shared base repo, src/dest dirs, and wiki -config.yaml file.
+ - -} 
+initWiki :: WikiName -> IO WikiConfig
 initWiki wikiName = do
     let repoPath = (wikiNameToString wikiName ++ ".git")
     repo <- initBareSharedRepo repoPath
@@ -295,11 +293,32 @@ initWiki wikiName = do
     configFile <- createSetupFileFor wikiName [ ("wikiname", wiki)
                                               , ("srcdir", wiki)
                                               , ("destdir", "public_html/" ++ wiki)
+                                              , ("theme", "cayman")
                                               ]
     srcDir <- createSrcDir wikiName "etc/setup/auto-blog"
     installPostUpdateHook repo
     registerWiki wikiName configFile
-    return (LocalWiki wikiName repo srcDir destDir configFile)
+    config <- loadWikiConfig wikiName
+    return (WikiConfig wikiName config)
+
+
+loadWikiConfig :: WikiName -> IO Dictionary
+loadWikiConfig wikiName = do
+    xs <- ((wikiConfigFilePath wikiName) >>= readFile)
+    return (decodeYamlMarkdownHeader (lines xs))
+
+
+wikiConfigFilePath :: WikiName -> IO FilePath
+wikiConfigFilePath wikiName = do
+    wikis <- getWikiList
+    let findWiki = wikiNameToString wikiName
+    let wikiLine = filter (\wiki -> (wiki =~ ("^" ++ findWiki ++ " "))) wikis
+    let line = head wikiLine
+    return (keyValue (splitLine line))
+  where
+    keyValue (k,_,v) = v
+    splitLine :: String -> (String,String,String)
+    splitLine line = line =~ " "
 
 
 {-

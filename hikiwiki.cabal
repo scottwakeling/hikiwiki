@@ -14,7 +14,7 @@ cabal-version:       >=1.10
 executable HikiWiki
     main-is: Main.hs
 
-    other-modules:
+    --other-modules:
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:    
@@ -36,9 +36,12 @@ executable HikiWiki
 Test-Suite testsuite-basic
     type:               exitcode-stdio-1.0
     main-is:            Main.hs
-    hs-source-dirs:     test
+    hs-source-dirs:     test, .
     build-depends:      base >=4.6 && <4.7,
                         test-framework,
                         test-framework-hunit,
                         HUnit,
+                        filepath >=1.3 && <1.4,
+                        regex-posix >=0.95 && <0.96,
+                        directory >=1.2 && <1.3,
                         containers == 0.5.*
