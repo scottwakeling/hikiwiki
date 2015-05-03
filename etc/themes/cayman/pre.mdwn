@@ -11,8 +11,8 @@
   </head>
   <body>
     <section class="page-header">
-      <h1 class="project-name">/~scott/blog</h1>
-      <h2 class="project-tagline">Why Functional Programming?</h2>
+      <h1 class="project-name">diskfish.org/~scott</h1>
+      <!--h2 class="project-tagline">Why Functional Programming?</h2-->
     </section>
     <section class="main-content">
 
