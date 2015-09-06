@@ -1,10 +1,19 @@
 # TODO
 
-## Themes
+
+.hikiwiki and etc/, wikilist location etc. needs to be dynamic
+    which first requires etc is installed in .hikiwiki by cabal install
+
+## Templating
 
 Templating with Heist?
 
-Be able to specify a theme to wrap generated html in
+
+## Install
+
+cabal install
+    So I don't have to cp out of hikiwiki into ~
+    Creates .hikiwiki/etc and .hikiwiki/wikilist
 
 
 ## Documentation
@@ -14,37 +23,35 @@ Add a Files seciton to man page
   /etc
 
 
-## Configuration
+## Debian
 
-Source and Publish dirs need to be absolute paths in config yaml
+Package for Debian
 
 
 ## Bugs
 
+hard-coded path in pandoc exec fails rebuilds
+
 Irrefutable pattern passing HikiWiki unrecognised cmd line args
 
 No error message is given if pandoc is not installed
-    Is this still an issue? .cabal require it?
 
 --init should end with a rebuild, ready to go..
-
+i
 - install HikiWiki as part of build
   (post-update can then HikiWiki, not ./HikiWiki, and
    won't need hacky etc folder laying around, it can go in ~/.hikiwiki/etc)
 
 Going to have:
-  ~/.hikiwiki/wikilist|etc|themese|plugins
+  ~/.hikiwiki/wikilist|(etc/setup|themes)|plugins
 Not going to have /etc/.hikiwiki until you explicitly handle sudo invocation
 
 
 ## Testing
 
-I like :reload in ghci to see if it's compiling
-  but running a simple test suite as part of make.sh would be even better!
-
 Improve the command line parsing (RWH late chapter)
 
-hikiwiki --rebuild repo
+hikiwiki rebuild repo
   loads config from repo.setup and compile srcdir into dstdir
   if wiki not registered, rebuild that local src dir if present (staging/test)
 
