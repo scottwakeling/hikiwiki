@@ -1,8 +1,8 @@
 # HikiWiki
 
-This is probably not the wiki compiler you are looking for.
+This is probably not the wiki compiler you were looking for.
 
-I am writing it as a learning exercise in Haskell, so it misses many, many
+This is just my mad experiment in learning Haskell, so it misses many, many
 features you will need IRL. Take a look at ikiwiki instead, it is far more
 mature and useful.
 
@@ -11,15 +11,15 @@ me how to write better Haskell, this file should get you started.
 
 ## Build
 
-HikiWiki uses cabal, so building is easy:
+HikiWiki uses cabal. Use this shell script to cabal install and run tests:
 
     ./make.sh
 
 ## Install
 
 It's too early to bother with packaging, so just copy the HikiWiki binary to
-wherever you will serve your content from. You will also need to copy etc
-alongside it to have the default config templates and themes in place (needs
+wherever you will serve your content from. You will also need to cp -r etc
+alongside it to have the default config, templates and themes in place (needs
 fixing soon).
 
 ## Setup
@@ -50,7 +50,8 @@ myblog
 This is the src directory. It's a clone of the myblog.git repo where you
 will atually be pushing to (see below). HikiWiki compiles all markdown pulled
 into this src repo as pat of the --rebuild command that is triggered after
-each update.
+each update. You don't need to worry about any of this, I'm just explaining
+how it works.
 
 ```
 scott@home:~$ cat myblog-config.yaml
