@@ -10,7 +10,7 @@ module Compile
 
 import Control.Monad (forM)
 import Data.List.Split
-import System.Cmd
+import System.Process
 import System.Directory
 import System.FilePath.Posix
 import Text.Regex.Posix
@@ -25,16 +25,15 @@ import Yaml
  - directory, e.g. 'href="../stylesheets' for one dir down.
  -
  - TODO: Refactor the post-processing out of here..
- - TODO: Fix assumed location of etc
  - -}
-compile :: FilePath -> FilePath -> String -> IO ()
-compile input output theme = do
+compile :: FilePath -> FilePath -> String -> FilePath -> IO ()
+compile input output theme etcDir = do
     putStrLn $ "Compiling " ++ input ++ " to " ++ output
     createDirectoryIfMissing True (fst (splitFileName output))
     rawSystem "pandoc" [ "-B"
-                       , "/home/scott/src/hikiwiki/etc/themes/" ++ theme ++ "/pre.mdwn"
+                       , etcDir ++ "/themes/" ++ theme ++ "/pre.mdwn"
                        , "-A"
-                       , "/home/scott/src/hikiwiki/etc/themes/" ++ theme ++ "/post.mdwn"
+                       , etcDir ++ "/themes/" ++ theme ++ "/post.mdwn"
                        , input
                        , "-o"
                        , output
@@ -55,12 +54,12 @@ compile input output theme = do
  - replacing the .mdwn extensions with .html
  - TOOD: Should not assume public_html is in .
  - -}
-compileSrc :: [FilePath] -> String -> IO ()
-compileSrc [] _ = do
+compileSrc :: [FilePath] -> String -> FilePath -> IO ()
+compileSrc [] _ _ = do
     return ()
-compileSrc (x:xs) theme = do
-    compile x (addExtension (dropExtension ("public_html/" ++ x)) "html") theme
-    compileSrc xs theme
+compileSrc (x:xs) theme etcDir = do
+    compile x (addExtension (dropExtension ("public_html/" ++ x)) "html") theme etcDir
+    compileSrc xs theme etcDir
     return ()
 
 
@@ -73,8 +72,8 @@ compileSrc (x:xs) theme = do
  -       Should only pass source files (e.g. .mdwn) to compileSrc, not
  -       everything in the location provided..
  - -}
-compileWiki :: [(String,String)] -> IO (Bool)
-compileWiki wikiConfig = do
+compileWiki :: [(String,String)] -> FilePath -> IO (Bool)
+compileWiki wikiConfig etcDir = do
     let wiki = lookupYaml "wikiname" wikiConfig
     case wiki of
         Nothing -> (return False)
@@ -85,10 +84,10 @@ compileWiki wikiConfig = do
     tryCompile wiki = do
         src <- getSrcFilesRecursive wiki
         let theme = (themeName wikiConfig)
-        compileSrc src theme
+        compileSrc src theme etcDir
         putStrLn $ "Copying stylesheets for " ++ theme
         rawSystem "cp" [ "-r"
-                       , "etc/themes/" ++ theme ++ "/stylesheets/"
+                       , etcDir ++ "/themes/" ++ theme ++ "/stylesheets/"
                        , "public_html/" ++ wiki
                        ]
     themeName :: [(String,String)] -> String

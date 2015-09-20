@@ -5,7 +5,7 @@
 import Data.Char (toUpper)
 import Data.List.Split
 import Data.Maybe (fromMaybe)
-import System.Cmd
+import System.Process
 import System.Console.GetOpt
 import System.Directory
 import System.Environment
@@ -122,7 +122,9 @@ rebuildWiki wikiName = do
         True    -> removeDirectoryRecursive publishDir
         False   -> putStrLn ("Creating " ++ publishDir)
     createDirectoryIfMissing True publishDir
-    (loadWikiConfig wikiName >>= compileWiki)
+    wikiConfig <- loadWikiConfig wikiName
+    etcDir <- etcFilePath
+    compileWiki wikiConfig etcDir
 
 
 {- Creates a bare shared repo at the location specified.
@@ -223,6 +225,16 @@ wikiListFilePath = do
 
 
 {-
+ - Returns the filepath of the per-user hikiwiki etc folder.
+ - TODO: Install ~/.hikiwiki/etc and its default contents.
+ - -}
+etcFilePath :: IO FilePath
+etcFilePath = do
+    home <- getHomeDirectory
+    return (home ++ "/.hikiwiki/etc")
+
+
+{-
  - Returns a file descriptor for ~/.hikiwiki/wikilist with the specified
  - privileges. Creates ~/.hikiwiki dir and wikilist file if they don't exist
  - yet.
@@ -295,7 +307,8 @@ initWiki wikiName = do
                                               , ("destdir", "public_html/" ++ wiki)
                                               , ("theme", "cayman")
                                               ]
-    srcDir <- createSrcDir wikiName "etc/setup/auto-blog"
+    etcDir <- etcFilePath
+    srcDir <- createSrcDir wikiName (etcDir ++ "/setup/auto-blog")
     installPostUpdateHook repo
     registerWiki wikiName configFile
     config <- loadWikiConfig wikiName

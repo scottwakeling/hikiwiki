@@ -13,7 +13,7 @@ module Yaml
 
 import Control.Monad (forM)
 import Data.List.Split
-import System.Cmd
+import System.Process
 import System.Directory
 import System.FilePath.Posix
 import Text.Regex.Posix
