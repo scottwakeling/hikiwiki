@@ -25,14 +25,17 @@ import Yaml
  - directory, e.g. 'href="../stylesheets' for one dir down.
  -
  - TODO: Refactor the post-processing out of here..
+ - TODO: Fix assumed location of etc
  - -}
 compile :: FilePath -> FilePath -> String -> IO ()
 compile input output theme = do
     putStrLn $ "Compiling " ++ input ++ " to " ++ output
     createDirectoryIfMissing True (fst (splitFileName output))
-    rawSystem "pandoc" [ "/home/scott/hikiwiki/etc/themes/" ++ theme ++ "/pre.mdwn"
+    rawSystem "pandoc" [ "-B"
+                       , "/home/scott/src/hikiwiki/etc/themes/" ++ theme ++ "/pre.mdwn"
+                       , "-A"
+                       , "/home/scott/src/hikiwiki/etc/themes/" ++ theme ++ "/post.mdwn"
                        , input
-                       , "/home/scott/hikiwiki/etc/themes/" ++ theme ++ "/post.mdwn"
                        , "-o"
                        , output
                        ]
