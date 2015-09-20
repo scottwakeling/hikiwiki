@@ -1,5 +1,21 @@
 # TODO
 
+## Bugs
+
+Irrefutable pattern passing HikiWiki unrecognised cmd line args
+
+No error message is given if pandoc is not installed
+
+--init should end with a rebuild, ready to go..
+- install HikiWiki as part of build
+  (post-update can then HikiWiki, not ./HikiWiki, and
+   won't need hacky etc folder laying around, it can go in ~/.hikiwiki/etc)
+
+Going to have:
+  ~/.hikiwiki/wikilist|(etc/setup|themes)|plugins
+Not going to have /etc/.hikiwiki until you explicitly handle sudo invocation
+
+
 
 .hikiwiki and etc/, wikilist location etc. needs to be dynamic
     which first requires etc is installed in .hikiwiki by cabal install
@@ -26,25 +42,6 @@ Add a Files seciton to man page
 ## Debian
 
 Package for Debian
-
-
-## Bugs
-
-hard-coded path in pandoc exec fails rebuilds
-
-Irrefutable pattern passing HikiWiki unrecognised cmd line args
-
-No error message is given if pandoc is not installed
-
---init should end with a rebuild, ready to go..
-i
-- install HikiWiki as part of build
-  (post-update can then HikiWiki, not ./HikiWiki, and
-   won't need hacky etc folder laying around, it can go in ~/.hikiwiki/etc)
-
-Going to have:
-  ~/.hikiwiki/wikilist|(etc/setup|themes)|plugins
-Not going to have /etc/.hikiwiki until you explicitly handle sudo invocation
 
 
 ## Testing

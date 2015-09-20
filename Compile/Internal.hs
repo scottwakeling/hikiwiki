@@ -8,20 +8,31 @@ import Text.Regex.Posix
 
 
 {-
- - Returns a recursive list of all file paths in the directory specified
- - excluding ., .., and .git.
- - TODO: Take a glob filter, so we can ask for all .mdwn, for example.
+ - Returns a recursive list of all markdown file paths beneath 'topDir'.
  - -}
 getSrcFilesRecursive :: FilePath -> IO [FilePath]
-getSrcFilesRecursive topdir = do
-    names <- getDirectoryContents topdir
-    let properNames = filter (`notElem` [".", "..", ".git"]) names
+getSrcFilesRecursive topDir = do
+    names <- getDirectoryContents topDir
+    let properNames = filter (isSrcFileOrDir) names
     paths <- forM properNames $ \name -> do
-        let path = topdir </> name
+        let path = topDir </> name
         isDirectory <- doesDirectoryExist path
         case isDirectory of
             True    -> getSrcFilesRecursive path
             False   -> return [path]
     return (concat paths)
+  where
+    isMarkdown :: FilePath -> Bool
+    isMarkdown path = case (splitSrcPath path) of
+        (_,".mdwn","") -> True
+        _ -> False
+      where
+        splitSrcPath :: FilePath -> (String,String,String)
+        splitSrcPath path = (snd (splitFileName path) =~ ".mdwn")
+    isSrcFileOrDir :: FilePath -> Bool
+    isSrcFileOrDir x = do
+        case hasExtension x of
+            True  -> isMarkdown x
+            False -> notElem x [".", "..", ".git"]
 
 
