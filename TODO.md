@@ -4,7 +4,6 @@
 
 No error message is given if pandoc is not installed
 
---init should end with a rebuild, ready to go..
 - install HikiWiki as part of build
   (post-update can then HikiWiki, not ./HikiWiki, and
    won't need hacky etc folder laying around, it can go in ~/.hikiwiki/etc)

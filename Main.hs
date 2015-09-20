@@ -291,6 +291,7 @@ initWikiCommand :: [String] -> IO ()
 initWikiCommand _ = do
     wikiName <- getWikiName
     initWiki wikiName
+    rebuildWiki wikiName
     return ()
 
 {-
