@@ -355,7 +355,10 @@ versionCommand [] = putStrLn versionString
 main :: IO ()
 main = do
     (command:args) <- getArgs
-    let (Just action) = lookup command dispatch
-    action args
+    case lookup command dispatch of
+      Just action -> action args
+      Nothing -> do
+          putStrLn $ "Unrecognized command: " ++ command
+          return ()
 
 

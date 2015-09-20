@@ -2,8 +2,6 @@
 
 ## Bugs
 
-Irrefutable pattern passing HikiWiki unrecognised cmd line args
-
 No error message is given if pandoc is not installed
 
 --init should end with a rebuild, ready to go..
@@ -14,8 +12,6 @@ No error message is given if pandoc is not installed
 Going to have:
   ~/.hikiwiki/wikilist|(etc/setup|themes)|plugins
 Not going to have /etc/.hikiwiki until you explicitly handle sudo invocation
-
-
 
 .hikiwiki and etc/, wikilist location etc. needs to be dynamic
     which first requires etc is installed in .hikiwiki by cabal install
