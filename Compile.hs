@@ -9,7 +9,7 @@ module Compile
 
 
 import Control.Monad (forM)
-import Data.List.Utils
+import Data.List.Split
 import System.Cmd
 import System.Directory
 import System.FilePath.Posix
@@ -56,7 +56,7 @@ compileSrc :: [FilePath] -> String -> IO ()
 compileSrc [] _ = do
     return ()
 compileSrc (x:xs) theme = do
-    compile x (replace ".mdwn" ".html" ("public_html/" ++ x)) theme
+    compile x (addExtension (dropExtension ("public_html/" ++ x)) "html") theme
     compileSrc xs theme
     return ()
 

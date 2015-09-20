@@ -12,7 +12,7 @@ module Yaml
 
 
 import Control.Monad (forM)
-import Data.List.Utils
+import Data.List.Split
 import System.Cmd
 import System.Directory
 import System.FilePath.Posix

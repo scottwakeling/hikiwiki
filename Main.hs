@@ -3,7 +3,7 @@
 ---- GPL version 3 or later (see http://www.gnu.org/licenses/gpl.html)
 --
 import Data.Char (toUpper)
-import Data.List.Utils
+import Data.List.Split
 import Data.Maybe (fromMaybe)
 import System.Cmd
 import System.Console.GetOpt
