@@ -18,35 +18,48 @@ import Text.Regex.Posix
 import Compile.Internal
 import Yaml
 
-{-
- - Compiles input .mdwn file to output .html file.
- -
- - Patches 'href="stylesheets' occurrences to be relative to output file in publish
- - directory, e.g. 'href="../stylesheets' for one dir down.
- -
- - TODO: Refactor the post-processing out of here..
- - -}
-compile :: FilePath -> FilePath -> String -> FilePath -> IO ()
-compile input output theme etcDir = do
-    putStrLn $ "Compiling " ++ input ++ " to " ++ output
-    createDirectoryIfMissing True (fst (splitFileName output))
-    rawSystem "pandoc" [ "-B"
-                       , etcDir ++ "/themes/" ++ theme ++ "/pre.mdwn"
-                       , "-A"
-                       , etcDir ++ "/themes/" ++ theme ++ "/post.mdwn"
-                       , input
-                       , "-o"
-                       , output
-                       ]
-    replaceInFile "href=\"stylesheets" ("href=\"" ++ (srcRoot output) ++ "stylesheets") output
-    return ()
-  where
-    countLetters str c = length $ filter (== c) str
-    srcRoot path = foldl (++) "" (take (countLetters path '/' -2) $ repeat "../")
-    replaceInFile string replacement output = do
-        rawSystem "sed" [ "-i"
-                        , "s~" ++ string ++ "~" ++ replacement ++ "~g"
-                        , output]
+
+{- Things that are compiled and processed into wikis. -}
+class WikiSrc f where
+    compile     :: f -> FilePath -> String -> FilePath -> IO ()
+    postProcess :: f -> FilePath -> String -> FilePath -> IO () 
+
+newtype MarkdownFile = FilePathToMarkdownFile
+    { markdownFileToFilePath :: FilePath
+    }
+    deriving (Show)
+
+instance WikiSrc MarkdownFile where
+    {- Patches 'href="stylesheets' occurrences to be relative to the output
+     - file in the publish directory, e.g. 'href="../stylesheets' where the
+     - output file location is one dir deep. -}
+    postProcess _ html theme etcDir = do
+        let ss = "stylesheets"
+        replace ("href=\"" ++ ss) ("href=\"" ++ (srcRoot html) ++ ss) html
+        return ()
+      where
+        count str c = length $ filter (== c) str
+        srcRoot path = foldl (++) "" (take (count path '/' -2) $ repeat "../")
+        replace string replacement output = do
+            rawSystem "sed" [ "-i"
+                            , "s~" ++ string ++ "~" ++ replacement ++ "~g"
+                            , output]
+
+    {- Compile this markdown file to html. -}
+    compile f output theme etcDir = do
+        let path = markdownFileToFilePath f
+        putStrLn $ "Compiling " ++ path ++ " to " ++ output
+        createDirectoryIfMissing True (fst (splitFileName output))
+        rawSystem "pandoc" [ "-B"
+                           , etcDir ++ "/themes/" ++ theme ++ "/pre.mdwn"
+                           , "-A"
+                           , etcDir ++ "/themes/" ++ theme ++ "/post.mdwn"
+                           , path
+                           , "-o"
+                           , output
+                           ]
+        return ()
+
 
 
 {-
@@ -58,7 +71,8 @@ compileSrc :: [FilePath] -> String -> FilePath -> IO ()
 compileSrc [] _ _ = do
     return ()
 compileSrc (x:xs) theme etcDir = do
-    compile x (addExtension (dropExtension ("public_html/" ++ x)) "html") theme etcDir
+    compile (FilePathToMarkdownFile x) (addExtension (dropExtension ("public_html/" ++ x)) "html") theme etcDir
+    postProcess (FilePathToMarkdownFile x) (addExtension (dropExtension ("public_html/" ++ x)) "html") theme etcDir
     compileSrc xs theme etcDir
     return ()
 

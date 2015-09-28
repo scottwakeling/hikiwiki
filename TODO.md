@@ -1,5 +1,8 @@
 # TODO
 
+instance WikiSrc ImgFile
+  compile is a mv, postProcess is a return()
+
 ## Bugs
 
 No error message is given if pandoc is not installed
