@@ -1,6 +1,8 @@
 #!/bin/sh
 
+#cabal update
+cabal sandbox init
 cabal install -j
-runghc test/Main.hs
+cabal test
 cp .cabal-sandbox/bin/HikiWiki .
 

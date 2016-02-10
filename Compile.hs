@@ -9,7 +9,7 @@ module Compile
 
 
 import Control.Monad (forM)
-import Data.List.Split
+import Data.List.Utils
 import System.Process
 import System.Directory
 import System.FilePath.Posix
