@@ -7,6 +7,22 @@ import System.FilePath.Posix
 import Text.Regex.Posix
 
 
+splitFilePath :: FilePath -> String -> (String,String,String)
+splitFilePath path ext = (snd (splitFileName path) =~ ext)
+
+
+isMarkdown :: FilePath -> Bool
+isMarkdown path = case (splitFilePath path ".mdwn") of
+    (_,".mdwn","") -> True
+    _ -> False
+
+
+isImage :: FilePath -> Bool
+isImage path = case (splitFilePath path ".jpg") of
+    (_,".jpg","") -> True
+    _ -> False
+
+
 {-
  - Returns a recursive list of all markdown file paths beneath 'topDir'.
  - -}
@@ -22,17 +38,12 @@ getSrcFilesRecursive topDir = do
             False   -> return [path]
     return (concat paths)
   where
-    isMarkdown :: FilePath -> Bool
-    isMarkdown path = case (splitSrcPath path) of
-        (_,".mdwn","") -> True
-        _ -> False
-      where
-        splitSrcPath :: FilePath -> (String,String,String)
-        splitSrcPath path = (snd (splitFileName path) =~ ".mdwn")
     isSrcFileOrDir :: FilePath -> Bool
     isSrcFileOrDir x = do
         case hasExtension x of
-            True  -> isMarkdown x
+            True  -> case isMarkdown x of
+                         True -> True
+                         False -> isImage x
             False -> notElem x [".", "..", ".git"]
 
 

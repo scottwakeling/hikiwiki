@@ -21,20 +21,31 @@ import Yaml
 
 {- Things that are compiled and processed into wikis. -}
 class WikiSrc f where
-    compile     :: f -> FilePath -> String -> FilePath -> IO ()
-    postProcess :: f -> FilePath -> String -> FilePath -> IO () 
+    compile     :: f -> String -> FilePath -> IO ()
+    postProcess :: f -> String -> FilePath -> IO ()
+
 
 newtype MarkdownFile = FilePathToMarkdownFile
     { markdownFileToFilePath :: FilePath
     }
     deriving (Show)
 
+
+newtype ImageFile = FilePathToImageFile
+    { imageFileToFilePath :: FilePath
+    }
+    deriving (Show)
+
+
+{- TODO: Represent steps in compile and postProcess with some IR? -}
 instance WikiSrc MarkdownFile where
     {- Patches 'href="stylesheets' occurrences to be relative to the output
      - file in the publish directory, e.g. 'href="../stylesheets' where the
      - output file location is one dir deep. -}
-    postProcess _ html theme etcDir = do
+    postProcess f theme etcDir = do
         let ss = "stylesheets"
+        let path = markdownFileToFilePath f
+        let html = addExtension (dropExtension ("public_html/" ++ path)) "html"
         replace ("href=\"" ++ ss) ("href=\"" ++ (srcRoot html) ++ ss) html
         return ()
       where
@@ -46,20 +57,32 @@ instance WikiSrc MarkdownFile where
                             , output]
 
     {- Compile this markdown file to html. -}
-    compile f output theme etcDir = do
+    compile f theme etcDir = do
         let path = markdownFileToFilePath f
-        putStrLn $ "Compiling " ++ path ++ " to " ++ output
-        createDirectoryIfMissing True (fst (splitFileName output))
+        let dst = addExtension (dropExtension ("public_html/" ++ path)) "html"
+        putStrLn $ "Compiling " ++ path ++ " to " ++ dst
+        createDirectoryIfMissing True (fst (splitFileName dst))
         rawSystem "pandoc" [ "-B"
                            , etcDir ++ "/themes/" ++ theme ++ "/pre.mdwn"
                            , "-A"
                            , etcDir ++ "/themes/" ++ theme ++ "/post.mdwn"
                            , path
                            , "-o"
-                           , output
+                           , dst
                            ]
         return ()
 
+
+instance WikiSrc ImageFile where
+    postProcess _ _ _ = do
+        return ()
+    compile f _ _ = do
+        let path = imageFileToFilePath f
+        let dst = addExtension (dropExtension ("public_html/" ++ path)) "jpg"
+        putStrLn $ "Copying " ++ path ++ " to " ++ dst
+        createDirectoryIfMissing True (fst (splitFileName dst))
+        rawSystem "cp" [path, dst]
+        return ()
 
 
 {-
@@ -71,11 +94,20 @@ compileSrc :: [FilePath] -> String -> FilePath -> IO ()
 compileSrc [] _ _ = do
     return ()
 compileSrc (x:xs) theme etcDir = do
-    compile (FilePathToMarkdownFile x) (addExtension (dropExtension ("public_html/" ++ x)) "html") theme etcDir
-    postProcess (FilePathToMarkdownFile x) (addExtension (dropExtension ("public_html/" ++ x)) "html") theme etcDir
+    case isMarkdown x of
+        True -> compileMarkdownFile x theme etcDir
+        False -> compileImageFile x theme etcDir
     compileSrc xs theme etcDir
     return ()
-
+  where
+    compileMarkdownFile x theme etcDir = do
+      compile (FilePathToMarkdownFile x) theme etcDir
+      postProcess (FilePathToMarkdownFile x) theme etcDir
+      return ()
+    compileImageFile x theme etcDir = do
+      compile (FilePathToImageFile x) theme etcDir
+      postProcess (FilePathToImageFile x) theme etcDir
+      return ()
 
 {-
  - Compiles all input files in the source directory provided to the default
