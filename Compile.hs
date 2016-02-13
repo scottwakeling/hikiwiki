@@ -18,47 +18,21 @@ import Text.Regex.Posix
 import Compile.Internal
 import Yaml
 
-
-{- Things that are compiled and processed into wikis. -}
-class WikiSrc f where
+{- A class of types that can be compiled and post-processed. -}
+class SourceFiles f where
     compile     :: f -> String -> FilePath -> IO ()
     postProcess :: f -> String -> FilePath -> IO ()
 
+data SourceFile = MarkdownFile FilePath | ImageFile FilePath
 
-newtype MarkdownFile = FilePathToMarkdownFile
-    { markdownFileToFilePath :: FilePath
-    }
-    deriving (Show)
-
-
-newtype ImageFile = FilePathToImageFile
-    { imageFileToFilePath :: FilePath
-    }
-    deriving (Show)
-
+getSrcFilePath :: SourceFile -> FilePath
+getSrcFilePath (MarkdownFile f) = f
+getSrcFilePath (ImageFile f) = f
 
 {- TODO: Represent steps in compile and postProcess with some IR? -}
-instance WikiSrc MarkdownFile where
-    {- Patches 'href="stylesheets' occurrences to be relative to the output
-     - file in the publish directory, e.g. 'href="../stylesheets' where the
-     - output file location is one dir deep. -}
-    postProcess f theme etcDir = do
-        let ss = "stylesheets"
-        let path = markdownFileToFilePath f
-        let html = addExtension (dropExtension ("public_html/" ++ path)) "html"
-        replace ("href=\"" ++ ss) ("href=\"" ++ (srcRoot html) ++ ss) html
-        return ()
-      where
-        count str c = length $ filter (== c) str
-        srcRoot path = foldl (++) "" (take (count path '/' -2) $ repeat "../")
-        replace string replacement output = do
-            rawSystem "sed" [ "-i"
-                            , "s~" ++ string ++ "~" ++ replacement ++ "~g"
-                            , output]
-
-    {- Compile this markdown file to html. -}
-    compile f theme etcDir = do
-        let path = markdownFileToFilePath f
+instance SourceFiles SourceFile where
+    {- Compile markdown to html. -}
+    compile (MarkdownFile path) theme etcDir = do
         let dst = addExtension (dropExtension ("public_html/" ++ path)) "html"
         putStrLn $ "Compiling " ++ path ++ " to " ++ dst
         createDirectoryIfMissing True (fst (splitFileName dst))
@@ -71,43 +45,71 @@ instance WikiSrc MarkdownFile where
                            , dst
                            ]
         return ()
-
-
-instance WikiSrc ImageFile where
-    postProcess _ _ _ = do
-        return ()
-    compile f _ _ = do
-        let path = imageFileToFilePath f
+    {- Compile images by copying them into place. -}
+    compile (ImageFile path) _ _ = do
         let dst = addExtension (dropExtension ("public_html/" ++ path)) "jpg"
         putStrLn $ "Copying " ++ path ++ " to " ++ dst
         createDirectoryIfMissing True (fst (splitFileName dst))
         rawSystem "cp" [path, dst]
         return ()
-
+    {- Patches 'href="stylesheets' occurrences to be relative to the output
+     - file in the publish directory, e.g. 'href="../stylesheets' where the
+     - output file location is one dir deep. -}
+    postProcess (MarkdownFile path) theme etcDir = do
+        let ss = "stylesheets"
+        let html = addExtension (dropExtension ("public_html/" ++ path)) "html"
+        replace ("href=\"" ++ ss) ("href=\"" ++ (srcRoot html) ++ ss) html
+        return ()
+      where
+        count str c = length $ filter (== c) str
+        srcRoot path = foldl (++) "" (take (count path '/' -2) $ repeat "../")
+        replace string replacement output = do
+            rawSystem "sed" [ "-i"
+                            , "s~" ++ string ++ "~" ++ replacement ++ "~g"
+                            , output]
+    postProcess (ImageFile path) _ _ = do
+        return ()
 
 {-
- - Compiles the input list of source files to the default output location,
+ - Compiles an input list of SourceFiles to the default output location,
  - replacing the .mdwn extensions with .html
  - TOOD: Should not assume public_html is in .
  - -}
-compileSrc :: [FilePath] -> String -> FilePath -> IO ()
+compileSrc :: (SourceFiles f) => [f] -> String -> FilePath -> IO ()
 compileSrc [] _ _ = do
     return ()
 compileSrc (x:xs) theme etcDir = do
-    case isMarkdown x of
-        True -> compileMarkdownFile x theme etcDir
-        False -> compileImageFile x theme etcDir
+    compile x theme etcDir
+    postProcess x theme etcDir
     compileSrc xs theme etcDir
     return ()
+
+
+{-
+ - Returns a recursive list of all markdown file paths beneath 'root'.
+ - -}
+getSrcFilesRecursive :: FilePath -> IO [SourceFile]
+getSrcFilesRecursive root = do
+    names <- getDirectoryContents root
+    let properNames = filter (isSrcFileOrDir) names
+    paths <- forM properNames $ \name -> do
+        let path = root </> name
+        isDirectory <- doesDirectoryExist path
+        case isDirectory of
+            True    -> getSrcFilesRecursive path
+            False   -> case isMarkdown path of
+                           True  -> return [MarkdownFile path]
+                           False -> return [ImageFile path]
+    return (concat paths)
   where
-    compileMarkdownFile x theme etcDir = do
-      compile (FilePathToMarkdownFile x) theme etcDir
-      postProcess (FilePathToMarkdownFile x) theme etcDir
-      return ()
-    compileImageFile x theme etcDir = do
-      compile (FilePathToImageFile x) theme etcDir
-      postProcess (FilePathToImageFile x) theme etcDir
-      return ()
+    isSrcFileOrDir :: FilePath -> Bool
+    isSrcFileOrDir x = do
+        case hasExtension x of
+            True  -> case isMarkdown x of
+                         True -> True
+                         False -> isImage x
+            False -> notElem x [".", "..", ".git"]
+
 
 {-
  - Compiles all input files in the source directory provided to the default
