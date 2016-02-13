@@ -349,17 +349,29 @@ versionCommand :: [String] -> IO ()
 versionCommand [] = putStrLn versionString
 
 
+showUsage :: IO ()
+showUsage = do
+    putStrLn $ "Usage: HikiWiki <command> <args>"
+    putStrLn $ "where possible commands include:"
+    putStrLn $ "  init"
+    putStrLn $ "  rebuild <wiki>"
+    putStrLn $ "  remove <wiki>"
+    putStrLn $ "  version"
+    return ()
+
 {-
  - Main entry point.
  - Dispatches command line arguments to command functions.
  - -}
 main :: IO ()
 main = do
-    (command:args) <- getArgs
-    case lookup command dispatch of
-      Just action -> action args
-      Nothing -> do
-          putStrLn $ "Unrecognized command: " ++ command
-          return ()
-
+    (commandAndArgs) <- getArgs
+    case commandAndArgs of
+        [] -> showUsage
+        (command:args) -> case lookup command dispatch of
+            Just action -> action args
+            Nothing -> do
+                putStrLn $ "Unrecognized command: " ++ command
+                return ()
+    return ()
 
