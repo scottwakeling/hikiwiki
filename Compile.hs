@@ -4,7 +4,8 @@
 --
 module Compile
     (
-      compileWiki
+      compileSrc,
+      getSrcFilesRecursive
     ) where
 
 
@@ -24,10 +25,6 @@ class SourceFiles f where
     postProcess :: f -> String -> FilePath -> IO ()
 
 data SourceFile = MarkdownFile FilePath | ImageFile FilePath
-
-getSrcFilePath :: SourceFile -> FilePath
-getSrcFilePath (MarkdownFile f) = f
-getSrcFilePath (ImageFile f) = f
 
 {- TODO: Represent steps in compile and postProcess with some IR? -}
 instance SourceFiles SourceFile where
@@ -109,39 +106,6 @@ getSrcFilesRecursive root = do
                          True -> True
                          False -> isImage x
             False -> notElem x [".", "..", ".git"]
-
-
-{-
- - Compiles all input files in the source directory provided to the default
- - destination directory.
- -
- - TODO: Assumes the src dir and public_html are in .
- -       Should take a Wiki?
- -       Should only pass source files (e.g. .mdwn) to compileSrc, not
- -       everything in the location provided..
- - -}
-compileWiki :: [(String,String)] -> FilePath -> IO (Bool)
-compileWiki wikiConfig etcDir = do
-    let wiki = lookupYaml "wikiname" wikiConfig
-    case wiki of
-        Nothing -> (return False)
-        Just wiki -> do
-            tryCompile wiki
-            (return True)
-  where
-    tryCompile wiki = do
-        src <- getSrcFilesRecursive wiki
-        let theme = (themeName wikiConfig)
-        compileSrc src theme etcDir
-        putStrLn $ "Copying stylesheets for " ++ theme
-        rawSystem "cp" [ "-r"
-                       , etcDir ++ "/themes/" ++ theme ++ "/stylesheets/"
-                       , "public_html/" ++ wiki
-                       ]
-    themeName :: [(String,String)] -> String
-    themeName wikiConfig = case (lookupYaml "theme" wikiConfig) of
-        Nothing -> "cayman"
-        Just theme -> theme
 
 
 
