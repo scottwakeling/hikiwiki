@@ -4,11 +4,8 @@
 --
 module Wiki
     (
-      etcFilePath,
-      loadWikiConfig,
-      registerWiki,
       Wiki(Wiki),
-      WikiCommand(RebuildWiki,RefreshWiki,RemoveWiki),
+      WikiCommand(InitWiki,RebuildWiki,RefreshWiki,RemoveWiki),
       WikiCommands(run),
       WikiConfig,
       WikiName
@@ -22,6 +19,7 @@ import System.Process
 import Text.Regex.Posix
 
 import Compile
+import Repo
 import Yaml
 
 
@@ -147,15 +145,118 @@ compileWiki wikiConfig etcDir = do
         Just theme -> theme
 
 
+{- Creates a bare shared repo at the location specified. -}
+initBareSharedRepo :: FilePath -> IO Repo
+initBareSharedRepo repoLocation = do
+    rawSystem "git" [ "init"
+                    , repoLocation
+                    , "--bare"
+                    , "--shared"
+                    ]
+    return (LocalRepo repoLocation (IsBare True) (IsShared True))
+
+
+{-
+ - Creates and chmod ugo+x a post-update hook shell script in the Repo
+ - provided. Note that git commands use GIT_DIR instead of PWD, so we need to
+ - unset that to have 'cd' commands take effect and git pull to work etc.
+ -
+ - TODO: Assumes wiki is .. and the src dir is named after the repo sans .git.
+ - -}
+installPostUpdateHook :: Repo -> IO ()
+installPostUpdateHook repo = do
+    putStrLn "Installing post-update hook.."
+    let updateHookPath = (getRepoLocation repo ++ "/hooks/post-update")
+    fd <- openFile updateHookPath WriteMode
+    hPutStrLn fd "#!/bin/sh\n"
+    hPutStrLn fd "unset GIT_DIR"
+    hPutStrLn fd ("cd ../" ++ getRepoName repo)
+    hPutStrLn fd "git pull"
+    hPutStrLn fd "cd .."
+    hPutStrLn fd ("./HikiWiki --rebuild " ++ getRepoName repo)
+    hClose fd
+    perms <- getPermissions updateHookPath
+    setPermissions updateHookPath (perms {executable = True})
+
+
+{-
+ - Creates a $WIKI-setup.yaml file containing the key,value pairs provided.
+ - -}
+createSetupFileFor :: WikiName -> WikiConfig -> IO FilePath
+createSetupFileFor wikiName settings = do
+    putStrLn "Creating setup yaml.."
+    fd <- openFile configFile WriteMode
+    hPutStrLn fd "# HikiWiki - YAML formatted config file\n"
+    mapM (writeSetupFileLine fd) settings
+    hClose fd
+    canonicalizePath configFile
+  where
+    writeSetupFileLine fd setting = do
+        hPutStrLn fd (fst setting ++ ": " ++ snd setting)
+    configFile = wikiName ++ "-config.yaml"
+
+
+{-
+ - Creates a dest dir in public_html.
+ - TODO: Assumes public_html is in . Should read it from config, or be passed
+ -       the 'publish dir' or something?
+ - -}
+createDestDir :: WikiName -> IO FilePath
+createDestDir wikiName = do
+    let destDir = "public_html/" ++ wikiName
+    createDirectoryIfMissing True destDir
+    canonicalizePath destDir
+
+
+{-
+ - Creates a src dir by cloning a base repo in the current directory.
+ - TODO: Assumes repo is in . and named after WikiName.
+ -       Should take a Repo/RepoLocation and WikiName?
+ -       Or, gets a wiki config and src dir and repo loc is in there..?
+ - -}
+createSrcDir :: WikiName -> FilePath -> IO FilePath
+createSrcDir wikiName etc = do
+    putStrLn "Creating src dir.."
+    rawSystem "git" ["clone", (wikiName ++ ".git"), wikiName]
+    putStrLn "Copying base template to src dir.."
+    rawSystem "cp" ["-r",  (etc ++ "/."), wikiName]
+    setCurrentDirectory wikiName
+    rawSystem "git" ["add", "--all"]
+    rawSystem "git" ["commit", "-m", "First commit."]
+    putStr "Pushing first commit.."
+    rawSystem "git" ["push", "origin", "master"]
+    putStrLn " done!"
+    setCurrentDirectory ".."
+    canonicalizePath wikiName
+
+
 {- A class of types that represent commands which can be run on a Wiki. -}
 class WikiCommands c where
     run :: c -> IO ()
 
-data WikiCommand = RebuildWiki WikiName
+data WikiCommand = InitWiki WikiName
+                 | RebuildWiki WikiName
                  | RefreshWiki WikiName
                  | RemoveWiki WikiName
 
 instance WikiCommands WikiCommand where
+    {- Creates a bare shared base repo, src + dest dirs, and config yaml. -}
+    run (InitWiki wikiName) = do
+        let repoPath = wikiName ++ ".git"
+        repo <- initBareSharedRepo repoPath
+        destDir <- createDestDir wikiName
+        configFile <- createSetupFileFor wikiName [ ("wikiname", wikiName)
+                                                  , ("srcdir", wikiName)
+                                                  , ("destdir", "public_html/" ++ wikiName)
+                                                  , ("theme", "cayman")
+                                                  ]
+        etcDir <- etcFilePath
+        srcDir <- createSrcDir wikiName (etcDir ++ "/setup/auto-blog")
+        installPostUpdateHook repo
+        registerWiki wikiName configFile
+        config <- loadWikiConfig wikiName
+        return ()
+
     {- Deletes the destination directory and recompiles the wiki specified. -}
     run (RebuildWiki wikiName) = do
         let publishDir = "public_html/" ++ wikiName
